@@ -128,7 +128,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
         NSError *error;
         NSArray *contents = [fileManager contentsOfDirectoryAtPath:_strongSelf->_directory error:&error];
         if (!contents) {
-            DDLogError(@"Failed to list directory with error %@", error);
+            NSLog(@"Failed to list directory with error %@", error);
             return;
         }
         for (NSString *pathComponent in contents)
@@ -136,7 +136,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
             NSString *path = [_strongSelf->_directory stringByAppendingPathComponent:pathComponent];
             if (![fileManager removeItemAtPath:path error:&error])
             {
-                DDLogError(@"Failed to remove file with error %@", error);
+                NSLog(@"Failed to remove file with error %@", error);
             }
         }
         [self calculateSize];
@@ -193,7 +193,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     NSArray *contents = [fileManager contentsOfDirectoryAtPath:_directory error:&error];
     if (!contents)
     {
-        DDLogError(@"Failed to list directory with error %@", error);
+        NSLog(@"Failed to list directory with error %@", error);
         return;
     }
     for (NSString *pathComponent in contents)
@@ -248,7 +248,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
         }
         else
         {
-            DDLogError(@"Failed to remove file with error %@", error);
+            NSLog(@"Failed to remove file with error %@", error);
         }
     }
 }
@@ -272,7 +272,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     }
     else
     {
-        DDLogError(@"Failed to write to file %@", error);
+        NSLog(@"Failed to write to file %@", error);
     }
 }
 
@@ -287,7 +287,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     {
         if ([fileManager fileExistsAtPath:path isDirectory:nil])
         {
-            DDLogError(@"Set attributes failed with error %@", error.localizedDescription);
+            NSLog(@"Set attributes failed with error %@", error.localizedDescription);
         }
         else if (lazyData)
         { // The data was removed from disk cache but is still in memory
@@ -308,7 +308,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     NSArray *contents = [self contentsOfDirectoryAtURL:directoryURL includingPropertiesForKeys:@[property] options:kNilOptions error:&error];
     
     if (!contents) {
-        DDLogError(@"Failed to list directory with error %@", error);
+        NSLog(@"Failed to list directory with error %@", error);
         return;
     }
     

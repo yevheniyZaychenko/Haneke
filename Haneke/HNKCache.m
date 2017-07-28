@@ -471,7 +471,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
     NSError *error;
     if (![[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:&error])
     {
-        DDLogError(@"Failed to create directory with error %@", error);
+        NSLog(@"Failed to create directory with error %@", error);
     }
     return directory;
 }
