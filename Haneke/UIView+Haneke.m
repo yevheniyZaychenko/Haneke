@@ -37,6 +37,8 @@ static NSString *NSStringFromHNKScaleMode(HNKScaleMode scaleMode)
             return @"aspectfit";
         case HNKScaleModeNone:
             return @"scalenone";
+        case HNKScaleModeCenter:
+            return @"scalcenter";
     }
     return nil;
 }
@@ -52,8 +54,9 @@ static NSString *NSStringFromHNKScaleMode(HNKScaleMode scaleMode)
             return HNKScaleModeAspectFit;
         case UIViewContentModeScaleAspectFill:
             return HNKScaleModeAspectFill;
-        case UIViewContentModeRedraw:
         case UIViewContentModeCenter:
+            return HNKScaleModeCenter;
+        case UIViewContentModeRedraw:
         case UIViewContentModeTop:
         case UIViewContentModeBottom:
         case UIViewContentModeLeft:

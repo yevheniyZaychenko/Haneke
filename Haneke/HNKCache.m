@@ -20,6 +20,7 @@
 
 #import "HNKCache.h"
 #import "HNKDiskCache.h"
+#import "UIImage+safeImageWithData.h"
 
 NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
@@ -37,6 +38,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
 - (CGSize)hnk_aspectFillSizeForSize:(CGSize)size;
 - (CGSize)hnk_aspectFitSizeForSize:(CGSize)size;
+- (UIImage *)hnk_imageByScalingToSizeCentered:(CGSize)newSize;
 - (NSData*)hnk_dataWithCompressionQuality:(CGFloat)compressionQuality;
 - (UIImage *)hnk_decompressedImage;
 - (UIImage *)hnk_imageByScalingToSize:(CGSize)newSize;
@@ -125,11 +127,17 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 - (BOOL)fetchImageForFetcher:(id<HNKFetcher>)fetcher formatName:(NSString *)formatName success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock
 {
     NSString *key = fetcher.key;
+    
+    __weak typeof (self) _weakSelf = self;
+    
     return [self fetchImageForKey:key formatName:formatName success:^(UIImage *image) {
         if (successBlock) successBlock(image);
     } failure:^(NSError *error) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            HNKCacheFormat *format = _formats[formatName];
+            
+            __strong typeof(_weakSelf) _strongSelf = _weakSelf;
+            
+            HNKCacheFormat *format = _strongSelf.formats[formatName];
             
             [self fetchImageFromFetcher:fetcher completionBlock:^(UIImage *originalImage, NSError *error) {
                 if (!originalImage)
@@ -139,13 +147,15 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
                     });
                     return;
                 }
-                
-                UIImage *image = [self imageFromOriginal:originalImage key:key format:format];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [self setMemoryImage:image forKey:key format:format];
-                    if (successBlock) successBlock(image);
+
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                    UIImage *image = [self imageFromOriginal:originalImage key:key format:format];
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [self setMemoryImage:image forKey:key format:format];
+                        if (successBlock) successBlock(image);
+                    });
+                    [self setDiskImage:image forKey:key format:format];
                 });
-                [self setDiskImage:image forKey:key format:format];
             }];
         });
     }];
@@ -169,7 +179,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
     
     [format.diskCache fetchDataForKey:key success:^(NSData *data) {
         HanekeLog(@"Disk cache hit: %@/%@", formatName, key.lastPathComponent);
-        UIImage *image = [UIImage imageWithData:data];
+        UIImage *image = [UIImage hnk_safeImageWithData:data];
         if (image)
         {
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -295,6 +305,10 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
 - (void)setMemoryImage:(UIImage*)image forKey:(NSString*)key format:(HNKCacheFormat*)format
 {
+    if(!key) {
+        return;
+    }
+    
     NSString *formatName = format.name;
     NSCache *cache = _memoryCaches[formatName];
     if (!cache)
@@ -338,7 +352,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         }
         
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            UIImage *image = [UIImage imageWithData:data];
+            UIImage *image = [UIImage hnk_safeImageWithData:data];
             if (!image) return;
             image = [image hnk_decompressedImage];
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -406,12 +420,18 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         case HNKScaleModeAspectFill:
             resizedSize = [originalImage hnk_aspectFillSizeForSize:formatSize];
             break;
+            
         case HNKScaleModeAspectFit:
             resizedSize = [originalImage hnk_aspectFitSizeForSize:formatSize];
             break;
+            
+        case HNKScaleModeCenter:
+            return [originalImage hnk_imageByScalingToSizeCentered:formatSize];
+
         case HNKScaleModeFill:
             resizedSize = formatSize;
             break;
+            
         case HNKScaleModeNone:
             return originalImage;
     }
@@ -451,7 +471,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
     NSError *error;
     if (![[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:&error])
     {
-        NSLog(@"Failed to create directory with error %@", error);
+        DDLogError(@"Failed to create directory with error %@", error);
     }
     return directory;
 }
@@ -476,6 +496,20 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
     const BOOL hasAlpha = [self hnk_hasAlpha];
     NSData *data = hasAlpha ? UIImagePNGRepresentation(self) : UIImageJPEGRepresentation(self, compressionQuality);
     return data;
+}
+
+- (UIImage *)hnk_imageByScalingToSizeCentered:(CGSize)newSize
+{
+    CGSize aspectFillSize = [self hnk_aspectFillSizeForSize:newSize];
+    
+    CGRect centeredRect = CGRectMake((newSize.width - aspectFillSize.width) / 2, (newSize.height - aspectFillSize.height) / 2, aspectFillSize.width, aspectFillSize.height);
+    
+    const BOOL hasAlpha = [self hnk_hasAlpha];
+    UIGraphicsBeginImageContextWithOptions(newSize, !hasAlpha, 0.0);
+    [self drawInRect:centeredRect];
+    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return newImage;
 }
 
 - (CGSize)hnk_aspectFitSizeForSize:(CGSize)size
@@ -523,7 +557,6 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         { // Unsupported
             return self;
         }
-            break;
     }
     
     const CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();

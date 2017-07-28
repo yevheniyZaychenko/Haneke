@@ -162,6 +162,7 @@ typedef NS_ENUM(NSInteger, HNKScaleMode)
     HNKScaleModeFill = UIViewContentModeScaleToFill,
     HNKScaleModeAspectFit = UIViewContentModeScaleAspectFit,
     HNKScaleModeAspectFill = UIViewContentModeScaleAspectFill,
+    HNKScaleModeCenter = UIViewContentModeCenter,
     HNKScaleModeNone
 };
 

@@ -118,20 +118,25 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
 
 - (void)removeAllData
 {
+    __weak typeof (self) _weakSelf = self;
+    
     dispatch_async(_queue, ^{
+        
+        __strong typeof (_weakSelf) _strongSelf = _weakSelf;
+        
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSError *error;
-        NSArray *contents = [fileManager contentsOfDirectoryAtPath:_directory error:&error];
+        NSArray *contents = [fileManager contentsOfDirectoryAtPath:_strongSelf->_directory error:&error];
         if (!contents) {
-            NSLog(@"Failed to list directory with error %@", error);
+            DDLogError(@"Failed to list directory with error %@", error);
             return;
         }
         for (NSString *pathComponent in contents)
         {
-            NSString *path = [_directory stringByAppendingPathComponent:pathComponent];
+            NSString *path = [_strongSelf->_directory stringByAppendingPathComponent:pathComponent];
             if (![fileManager removeItemAtPath:path error:&error])
             {
-                NSLog(@"Failed to remove file with error %@", error);
+                DDLogError(@"Failed to remove file with error %@", error);
             }
         }
         [self calculateSize];
@@ -142,8 +147,13 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
 
 - (void)enumerateDataByAccessDateUsingBlock:(void(^)(NSString *key, NSData *data, NSDate *accessDate, BOOL *stop))block
 {
+    __weak typeof (self) _weakSelf = self;
+    
     dispatch_async(_queue, ^{
-        [[NSFileManager defaultManager] hnk_enumerateContentsOfDirectoryAtPath:_directory orderedByProperty:NSURLContentModificationDateKey ascending:NO usingBlock:^(NSURL *url, NSUInteger idx, BOOL *stop) {
+        
+        __strong typeof (_weakSelf) _strongSelf = _weakSelf;
+        
+        [[NSFileManager defaultManager] hnk_enumerateContentsOfDirectoryAtPath:_strongSelf->_directory orderedByProperty:NSURLContentModificationDateKey ascending:NO usingBlock:^(NSURL *url, NSUInteger idx, BOOL *stop) {
             NSDate *accessDate;
             [url getResourceValue:&accessDate forKey:NSURLContentModificationDateKey error:nil];
             
@@ -183,7 +193,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     NSArray *contents = [fileManager contentsOfDirectoryAtPath:_directory error:&error];
     if (!contents)
     {
-        NSLog(@"Failed to list directory with error %@", error);
+        DDLogError(@"Failed to list directory with error %@", error);
         return;
     }
     for (NSString *pathComponent in contents)
@@ -238,7 +248,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
         }
         else
         {
-            NSLog(@"Failed to remove file with error %@", error);
+            DDLogError(@"Failed to remove file with error %@", error);
         }
     }
 }
@@ -262,7 +272,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     }
     else
     {
-        NSLog(@"Failed to write to file %@", error);
+        DDLogError(@"Failed to write to file %@", error);
     }
 }
 
@@ -277,7 +287,7 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     {
         if ([fileManager fileExistsAtPath:path isDirectory:nil])
         {
-            NSLog(@"Set attributes failed with error %@", error.localizedDescription);
+            DDLogError(@"Set attributes failed with error %@", error.localizedDescription);
         }
         else if (lazyData)
         { // The data was removed from disk cache but is still in memory
@@ -296,18 +306,24 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     NSURL *directoryURL = [NSURL fileURLWithPath:path];
     NSError *error;
     NSArray *contents = [self contentsOfDirectoryAtURL:directoryURL includingPropertiesForKeys:@[property] options:kNilOptions error:&error];
-    if (!contents)
-    {
-        NSLog(@"Failed to list directory with error %@", error);
+    
+    if (!contents) {
+        DDLogError(@"Failed to list directory with error %@", error);
         return;
     }
+    
     contents = [contents sortedArrayUsingComparator:^NSComparisonResult(NSURL *url1, NSURL *url2) {
         id value1;
-        if ([url1 getResourceValue:&value1 forKey:property error:nil]) return ascending ? NSOrderedAscending : NSOrderedDescending;
+        if ([url1 getResourceValue:&value1 forKey:property error:nil])
+            return ascending ? NSOrderedAscending : NSOrderedDescending;
+        
         id value2;
-        if ([url2 getResourceValue:&value2 forKey:property error:nil]) return ascending ? NSOrderedDescending : NSOrderedAscending;
+        if ([url2 getResourceValue:&value2 forKey:property error:nil])
+            return ascending ? NSOrderedDescending : NSOrderedAscending;
+                
         return ascending ? [value1 compare:value2] : [value2 compare:value1];
     }];
+    
     [contents enumerateObjectsUsingBlock:block];
 }
 

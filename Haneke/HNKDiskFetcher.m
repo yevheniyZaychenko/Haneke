@@ -19,6 +19,7 @@
 //
 
 #import "HNKDiskFetcher.h"
+#import "UIImage+safeImageWithData.h"
 
 @implementation HNKDiskFetcher {
     NSString *_path;
@@ -65,7 +66,7 @@
         
         if (strongSelf->_cancelled) return;
         
-        UIImage *image = [UIImage imageWithData:data];
+        UIImage *image = [UIImage hnk_safeImageWithData:data];
         
         if (!image)
         {

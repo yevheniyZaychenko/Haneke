@@ -19,6 +19,7 @@
 //
 
 #import "HNKNetworkFetcher.h"
+#import "UIImage+safeImageWithData.h"
 
 @implementation HNKNetworkFetcher {
     NSURL *_URL;
@@ -92,7 +93,7 @@
             }
         }
         
-        UIImage *image = [UIImage imageWithData:data];
+        UIImage *image = [UIImage hnk_safeImageWithData:data];
         
         if (!image)
         {
