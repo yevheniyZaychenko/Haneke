@@ -270,10 +270,6 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
         _size += byteCount;
         [self controlCapacity];
     }
-    else
-    {
-        NSLog(@"Failed to write to file %@", error);
-    }
 }
 
 - (void)syncUpdateAccessDateForKey:(NSString*)key data:(NSData* (^)())lazyData
